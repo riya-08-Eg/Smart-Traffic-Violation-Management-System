@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf %}
+{% block title %}Edit violation | TrafficSafe{% endblock %}
+{% block heading %}Edit violation #{{ record.record_id }}{% endblock %}
+{% block crumbs %}<a href="{{ url_for('violations') }}">Violations</a><span>/</span><span>Edit #{{ record.record_id }}</span>{% endblock %}
+{% block content %}
+<div class="card narrow"><div class="card-head"><div><h3>Update violation record</h3></div></div>
+<div class="card-body"><form method="post" enctype="multipart/form-data" class="form-grid" style="grid-template-columns:1fr 1fr">{{ csrf() }}
+<label>Vehicle <span class="req">*</span><select name="vehicle_id" required>{% for v in vehicles %}<option value="{{ v.vehicle_id }}" {% if record.vehicle_id==v.vehicle_id %}selected{% endif %}>{{ v.registration_no }}{% if v.driver_name %} — {{ v.driver_name }}{% endif %}</option>{% endfor %}</select></label>
+<label>Violation type <span class="req">*</span><select name="violation_type_id" required>{% for t in types %}<option value="{{ t.violation_type_id }}" {% if record.violation_type_id==t.violation_type_id %}selected{% endif %}>{{ t.violation_type }}</option>{% endfor %}</select></label>
+<label>Date <span class="req">*</span><input type="date" name="violation_date" value="{{ record.violation_date.isoformat() }}" max="{{ today.isoformat() }}" required></label>
+<label>Location <span class="req">*</span><input name="location" minlength="3" maxlength="150" pattern=".*[A-Za-z].*" value="{{ record.location or '' }}" required></label>
+<label>Fine amount (₹) <span class="req">*</span><input type="number" name="fine_amount" min="0.01" step="0.01" value="{{ '%.2f'|format(record.fine_amount) }}" required></label>
+<label>Payment status <span class="req">*</span><select name="status" required>{% for s in ['Unpaid','Paid','Waived'] %}<option {% if record.status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+<div class="span-all">{% if record.evidence_photo %}<p class="cell-sub" style="margin-bottom:6px">Current evidence photo</p><img class="evidence-preview" style="max-height:140px" src="{{ url_for('evidence', filename=record.evidence_photo) }}" alt="Current evidence photo"><label style="margin-top:10px;display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" name="remove_photo" value="1" style="width:auto;margin:0"> Remove this photo</label>{% endif %}
+<label style="margin-top:12px">{{ 'Replace photo' if record.evidence_photo else 'Evidence photo' }} <span class="optional-tag">Optional</span><input type="file" name="evidence_photo" id="evidence-photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"><span class="hint">JPG, PNG or WEBP · maximum 5 MB</span><img id="evidence-preview" class="evidence-preview" alt="New photo preview" hidden></label></div>
+<div class="form-actions"><a class="btn" href="{{ url_for('violation_detail', record_id=record.record_id) }}">Cancel</a><button class="btn btn-primary" type="submit">{{ icon('check') }} Save changes</button></div></form></div></div>
+{% endblock %}

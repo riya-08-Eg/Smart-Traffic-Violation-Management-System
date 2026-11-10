@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf, confirm_button, pagination, empty, plate, status_badge %}
+{% block title %}Violations | TrafficSafe{% endblock %}
+{% block heading %}Violations{% endblock %}
+{% block crumbs %}<span>Admin</span><span>/</span><span>Violations</span>{% endblock %}
+{% block content %}
+<div class="stack">
+<div class="page-head"><div><h2>Traffic violations</h2><p>Record offences, attach evidence, and track fines and payment status.</p></div>
+  <div class="page-actions"><a class="btn" href="{{ url_for('export_csv', kind='violations', **filters.to_dict()) }}">{{ icon('download') }} Export {{ 'filtered ' if has_filters }}CSV</a>
+  <button class="btn btn-primary" type="button" data-toggle="#add" aria-expanded="{{ 'true' if form else 'false' }}">{{ icon('plus') }} Add violation</button></div></div>
+
+{% if not vehicles %}<div class="notice">{{ icon('alert','icon-sm') }}<div>Register at least one <a href="{{ url_for('vehicles') }}">vehicle</a> before recording a violation.</div></div>{% endif %}
+
+<div class="card panel" id="add" {% if not form %}hidden{% endif %}><div class="card-head"><div><h3>Add a violation record</h3><p>Selecting a violation type fills in its standard fine — you can adjust it.</p></div></div>
+<div class="card-body"><form method="post" enctype="multipart/form-data" class="form-grid" id="violation-form">{{ csrf() }}
+<label>Vehicle <span class="req">*</span><select name="vehicle_id" required><option value="">Select vehicle</option>{% for v in vehicles %}<option value="{{ v.vehicle_id }}" {% if form.get('vehicle_id')|string==v.vehicle_id|string %}selected{% endif %}>{{ v.registration_no }}{% if v.driver_name %} — {{ v.driver_name }}{% endif %}</option>{% endfor %}</select></label>
+<label>Violation type <span class="req">*</span><select name="violation_type_id" id="violation-type" required><option value="">Select violation</option>{% for t in types %}<option value="{{ t.violation_type_id }}" data-fine="{{ t.default_fine }}" {% if form.get('violation_type_id')|string==t.violation_type_id|string %}selected{% endif %}>{{ t.violation_type }} ({{ t.default_fine|inr(0) }})</option>{% endfor %}</select></label>
+<label>Date <span class="req">*</span><input type="date" name="violation_date" value="{{ form.get('violation_date', today.isoformat()) }}" max="{{ today.isoformat() }}" required></label>
+<label>Location <span class="req">*</span><input name="location" minlength="3" maxlength="150" pattern=".*[A-Za-z].*" placeholder="e.g. Park Street, Kolkata" value="{{ form.get('location','') }}" required></label>
+<label>Fine amount (₹) <span class="req">*</span><input type="number" name="fine_amount" id="fine-amount" min="0.01" step="0.01" placeholder="e.g. 500.00" value="{{ form.get('fine_amount','') }}" required></label>
+<label>Payment status <span class="req">*</span><select name="status" required>{% for s in ['Unpaid','Paid','Waived'] %}<option {% if form.get('status','Unpaid')==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+<label class="span-all">Evidence photo <span class="optional-tag">Optional</span><input type="file" name="evidence_photo" id="evidence-photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"><span class="hint">JPG, PNG or WEBP · maximum 5 MB</span><img id="evidence-preview" class="evidence-preview" alt="Evidence preview" hidden></label>
+<div class="form-actions"><button class="btn" type="button" data-toggle="#add">Cancel</button><button class="btn btn-primary" type="submit" {% if not vehicles %}disabled{% endif %}>{{ icon('check') }} Add record</button></div></form></div></div>
+
+<div class="card">
+  <form class="toolbar" method="get" data-autosubmit>
+    <div class="search">{{ icon('search') }}<input type="search" name="q" value="{{ filters.get('q','') }}" placeholder="Search vehicle, driver or location…" aria-label="Search violations"></div>
+    <div class="filters">
+      <select name="status" aria-label="Status"><option value="">All statuses</option>{% for s in ['Unpaid','Overdue','Paid','Waived'] %}<option {% if filters.get('status')==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+      <select name="type" aria-label="Violation type"><option value="">All types</option>{% for t in types %}<option value="{{ t.violation_type_id }}" {% if filters.get('type')|string==t.violation_type_id|string %}selected{% endif %}>{{ t.violation_type }}</option>{% endfor %}</select>
+      <label class="date-f">From <input type="date" name="from" value="{{ filters.get('from','') }}"></label><label class="date-f">To <input type="date" name="to" value="{{ filters.get('to','') }}"></label>
+      <select name="sort" aria-label="Sort"><option value="newest" {% if sort=='newest' %}selected{% endif %}>Newest first</option><option value="oldest" {% if sort=='oldest' %}selected{% endif %}>Oldest first</option><option value="fine_high" {% if sort=='fine_high' %}selected{% endif %}>Highest fine</option><option value="fine_low" {% if sort=='fine_low' %}selected{% endif %}>Lowest fine</option></select>
+      {% if has_filters %}<a class="btn" href="{{ url_for('violations') }}">{{ icon('x','icon-sm') }} Clear</a>{% endif %}</div>
+  </form>
+  {% if has_filters %}<div class="summary-line">{{ icon('info','icon-sm') }}<span><b>{{ pg.total }}</b> matching record{{ 's' if pg.total != 1 }} · total fines <b>{{ filtered_total|inr }}</b></span></div>{% endif %}
+  <div class="table-wrap"><table><thead><tr><th>Record</th><th>Vehicle</th><th>Violation</th><th>Date</th><th class="num">Fine</th><th>Status</th><th>Evidence</th><th class="num">Actions</th></tr></thead><tbody>
+  {% for r in records %}<tr>
+    <td><a href="{{ url_for('violation_detail', record_id=r.record_id) }}" class="cell-main">#{{ r.record_id }}</a>{% if r.appeal_status == 'Pending' %}<div><span class="status pending" style="margin-top:4px">Appeal</span></div>{% endif %}</td>
+    <td>{{ plate(r.registration_no) }}<div class="cell-sub">{{ r.driver_name or 'No driver' }}</div></td>
+    <td>{{ r.violation_type }}<div class="cell-sub">{{ icon('pin','icon-sm') }} {{ r.location or '—' }}</div></td>
+    <td class="nowrap">{{ r.violation_date|dfmt }}{% if r.status == 'Unpaid' %}<div class="cell-sub">Due {{ r.due_date|dfmt('%d %b') }}</div>{% endif %}</td>
+    <td class="num mono cell-main">{{ r.fine_amount|inr }}</td><td>{{ status_badge(r) }}</td>
+    <td>{% if r.evidence_photo %}<a class="btn btn-small" href="{{ url_for('evidence', filename=r.evidence_photo) }}" target="_blank" rel="noopener">{{ icon('camera','icon-sm') }} View</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td><div class="actions">
+      {% if r.status == 'Unpaid' %}<form method="post" action="{{ url_for('mark_paid', record_id=r.record_id) }}" data-confirm="Mark record #{{ r.record_id }} ({{ r.fine_amount|inr }}) as paid?" data-confirm-title="Mark as paid?" data-confirm-label="Mark paid">{{ csrf() }}<input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}"><button class="btn btn-small btn-success" title="Mark as paid" type="submit">{{ icon('check','icon-sm') }}<span class="sr-only">Mark paid</span></button></form>{% endif %}
+      <a class="btn btn-small" href="{{ url_for('violation_detail', record_id=r.record_id) }}" title="View">{{ icon('eye','icon-sm') }}<span class="sr-only">View</span></a>
+      <a class="btn btn-small" href="{{ url_for('edit_violation', record_id=r.record_id) }}" title="Edit">{{ icon('edit','icon-sm') }}<span class="sr-only">Edit</span></a>
+      {{ confirm_button(url_for('delete_violation', record_id=r.record_id), 'Delete record', 'Delete violation record #' ~ r.record_id ~ ' and its evidence photo? This cannot be undone.', title='Delete record?') }}</div></td></tr>
+  {% else %}<tr><td colspan="8">{{ empty('flag', 'No matching records' if has_filters else 'No violations yet', 'Adjust or clear your filters.' if has_filters else 'Use “Add violation” to record the first one.') }}</td></tr>{% endfor %}
+  </tbody></table></div>{{ pagination(pg) }}</div>
+</div>
+{% endblock %}

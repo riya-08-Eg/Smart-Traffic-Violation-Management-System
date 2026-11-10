@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, stat, status_badge, plate, empty, traffic_panel %}
+{% block title %}Dashboard | TrafficSafe{% endblock %}
+{% block heading %}Administrator dashboard{% endblock %}
+{% block crumbs %}<span>Admin</span><span>/</span><span>Overview</span>{% endblock %}
+{% block content %}
+<div class="stack">
+<section class="hero">
+  <div style="position:relative;z-index:1"><span class="pill">OVERVIEW</span><h2>Good day, Administrator</h2>
+    <p>{% if stats.overdue %}{{ stats.overdue }} fine{{ 's are' if stats.overdue != 1 else ' is' }} overdue{% else %}No overdue fines{% endif %}{% if stats.pending_appeals %} and {{ stats.pending_appeals }} appeal{{ 's' if stats.pending_appeals != 1 }} await{{ '' if stats.pending_appeals != 1 else 's' }} your review{% endif %}. Here is today’s picture of your traffic safety records.</p></div>
+  <div class="hero-actions"><a class="btn btn-light" href="{{ url_for('violations') }}#add">{{ icon('plus') }} Record violation</a><a class="btn" href="{{ url_for('export_csv', kind='violations') }}">{{ icon('download') }} Export CSV</a></div>
+</section>
+
+<div class="grid grid-4">
+  {{ stat('Registered drivers', stats.drivers, 'People in the system', 'blue', 'users', url_for('drivers')) }}
+  {{ stat('Registered vehicles', stats.vehicles, 'Linked to drivers', 'violet', 'truck', url_for('vehicles')) }}
+  {{ stat('Violations recorded', stats.violations, '<b>' ~ stats.this_month ~ '</b> this month', 'amber', 'flag', url_for('violations')) }}
+  {{ stat('Outstanding fines', stats.unpaid_amount|inr(0), '<b>' ~ stats.overdue ~ '</b> overdue · ' ~ (stats.total_fines|inr(0)) ~ ' issued', 'red', 'rupee', url_for('violations', status='Unpaid')) }}
+</div>
+
+<div class="grid grid-main">
+  <div class="card"><div class="card-head"><div><h3>Violations per month</h3><p>Last six months</p></div></div><div class="chart-box" id="chart-monthly"></div></div>
+  <div class="card"><div class="card-head"><div><h3>Fine collection</h3><p>{{ stats.collection_rate }}% of issued fines collected</p></div></div>
+    <div class="card-body"><div class="progress" role="progressbar" aria-valuenow="{{ stats.collection_rate }}" aria-valuemin="0" aria-valuemax="100"><i style="width:{{ stats.collection_rate }}%"></i></div>
+    <div style="display:flex;justify-content:space-between;margin:10px 0 18px;font-size:13px"><span class="muted">Collected <b style="color:var(--ink)">{{ stats.collected|inr(0) }}</b></span><span class="muted">Pending <b style="color:var(--ink)">{{ stats.unpaid_amount|inr(0) }}</b></span></div>
+    <div id="chart-status"></div></div></div>
+</div>
+
+<div class="grid grid-3">
+  <div class="card"><div class="card-head"><div><h3>Violation types</h3><p>Most common offences</p></div></div><div class="chart-box" id="chart-types"></div></div>
+  <div class="card"><div class="card-head"><div><h3>Hotspot locations</h3><p>Where violations happen most</p></div></div><div class="card-body">
+    {% if hotspots %}{% set top = hotspots[0][1] %}<div class="hbar">{% for name, n in hotspots %}<div class="hbar-row"><div class="hbar-top"><span title="{{ name }}">{{ name }}</span><b>{{ n }}</b></div><div class="hbar-track"><div class="hbar-fill warn" style="width:{{ (n / top * 100)|round }}%"></div></div></div>{% endfor %}</div>
+    {% else %}{{ empty('pin','No locations yet','Locations appear once violations are recorded.') }}{% endif %}</div></div>
+  <div class="card"><div class="card-head"><div><h3>Repeat offenders</h3><p>Vehicles with most violations</p></div></div><div class="card-body">
+    {% if repeat %}{% set top = repeat[0][1] %}<div class="hbar">{% for reg, n in repeat %}<div class="hbar-row"><div class="hbar-top"><span>{{ plate(reg) }}</span><b>{{ n }}</b></div><div class="hbar-track"><div class="hbar-fill" style="width:{{ (n / top * 100)|round }}%"></div></div></div>{% endfor %}</div>
+    {% else %}{{ empty('truck','No vehicles yet','Vehicles with violations will be ranked here.') }}{% endif %}</div></div>
+</div>
+
+<section id="traffic">
+  <div class="page-head"><div><h2>Live traffic alerts</h2><p>Incidents reported around Kolkata</p></div><span class="live-indicator"><i></i> LIVE DATA</span></div>
+  {{ traffic_panel('Click an alert to locate it on the map') }}
+</section>
+
+<section class="card"><div class="card-head"><div><h3>Recent violations</h3><p>Latest entries added to the system</p></div><a class="btn btn-small" href="{{ url_for('violations') }}">View all {{ icon('arrow','icon-sm') }}</a></div>
+  <div class="table-wrap"><table><thead><tr><th>Record</th><th>Vehicle</th><th>Violation</th><th>Date</th><th class="num">Fine</th><th>Status</th></tr></thead><tbody>
+  {% for r in recent %}<tr><td><a href="{{ url_for('violation_detail', record_id=r.record_id) }}">#{{ r.record_id }}</a></td><td>{{ plate(r.registration_no) }}</td><td>{{ r.violation_type }}<div class="cell-sub">{{ r.location or '' }}</div></td><td class="nowrap">{{ r.violation_date|dfmt }}</td><td class="num mono">{{ r.fine_amount|inr }}</td><td>{{ status_badge(r) }}</td></tr>
+  {% else %}<tr><td colspan="6">{{ empty('flag','No violation records yet','Add the first one from the Violations page.') }}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+</div>
+<script type="application/json" id="chart-data">{{ charts|tojson }}</script>
+{% endblock %}

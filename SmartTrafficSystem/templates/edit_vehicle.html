@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf %}
+{% block title %}Edit vehicle | TrafficSafe{% endblock %}
+{% block heading %}Edit vehicle{% endblock %}
+{% block crumbs %}<a href="{{ url_for('vehicles') }}">Vehicles</a><span>/</span><span>Edit</span>{% endblock %}
+{% block content %}
+<div class="card narrow"><div class="card-head"><div><h3>Update vehicle details</h3></div></div>
+<div class="card-body"><form method="post" class="form-grid" style="grid-template-columns:1fr 1fr">{{ csrf() }}
+<label>Registration number <span class="req">*</span><input name="registration_no" required maxlength="20" style="text-transform:uppercase" pattern="[A-Za-z]{2}[\- ]?[0-9]{1,2}[\- ]?[A-Za-z]{1,3}[\- ]?[0-9]{4}" value="{{ vehicle.registration_no }}"></label>
+<label>Vehicle type <span class="req">*</span><select name="vehicle_type" required>{% for t in vehicle_types %}<option {% if vehicle.vehicle_type==t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+<label class="span-all">Linked driver <span class="req">*</span><select name="driver_id" required><option value="">Select driver</option>{% for d in drivers %}<option value="{{ d.driver_id }}" {% if vehicle.driver_id==d.driver_id %}selected{% endif %}>{{ d.name }} — {{ d.license_no }}</option>{% endfor %}</select></label>
+<div class="form-actions"><a class="btn" href="{{ url_for('vehicles') }}">Cancel</a><button class="btn btn-primary" type="submit">{{ icon('check') }} Save changes</button></div></form></div></div>
+{% endblock %}

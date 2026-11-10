@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf, stat, status_badge, plate, empty, traffic_panel %}
+{% block title %}My dashboard | TrafficSafe{% endblock %}
+{% block heading %}My dashboard{% endblock %}
+{% block crumbs %}<span>Driver</span><span>/</span><span>Overview</span>{% endblock %}
+{% block content %}
+<div class="stack">
+<section class="hero">
+  <div style="position:relative;z-index:1"><span class="pill">PERSONAL DRIVER PORTAL</span><h2>Hello, {{ session.display_name.split()[0] }}</h2>
+    <p>{% if totals.unpaid %}You have <b>{{ totals.unpaid }}</b> unpaid fine{{ 's' if totals.unpaid != 1 }} totalling <b>{{ totals.fine_total|inr }}</b>.{% if totals.overdue %} {{ totals.overdue }} {{ 'are' if totals.overdue != 1 else 'is' }} overdue.{% endif %}{% else %}You have no outstanding fines. Drive safe!{% endif %}</p></div>
+  <div class="hero-actions"><a class="btn btn-light" href="#traffic">{{ icon('activity') }} Live traffic</a><a class="btn" href="{{ url_for('driver_export') }}">{{ icon('download') }} Download records</a></div>
+</section>
+
+{% if unpaid %}
+<section class="card"><div class="card-head"><div><h3>Fines awaiting payment</h3><p>Pay online in a few taps, or appeal if you think a fine is incorrect.</p></div></div>
+  <div class="table-wrap"><table><thead><tr><th>Violation</th><th>Vehicle</th><th>Due</th><th class="num">Amount</th><th class="num">Action</th></tr></thead><tbody>
+  {% for r in unpaid %}<tr><td><a class="cell-main" href="{{ url_for('violation_detail', record_id=r.record_id) }}">{{ r.violation_type }}</a><div class="cell-sub">{{ r.violation_date|dfmt }} · {{ r.location }}</div></td><td>{{ plate(r.registration_no) }}</td>
+    <td class="nowrap">{{ r.due_date|dfmt }} {% if r.overdue %}<span class="status overdue">Overdue</span>{% endif %}</td><td class="num mono cell-main">{{ r.fine_amount|inr }}</td>
+    <td><div class="actions"><a class="btn btn-small" href="{{ url_for('violation_detail', record_id=r.record_id) }}">Details</a><a class="btn btn-small btn-primary" href="{{ url_for('pay_fine', record_id=r.record_id) }}">{{ icon('card','icon-sm') }} Pay now</a></div></td></tr>{% endfor %}
+  </tbody></table></div></section>{% endif %}
+
+<div class="grid grid-4">
+  {{ stat('My vehicles', totals.vehicles, 'Linked to your licence', 'blue', 'truck') }}
+  {{ stat('Total violations', totals.violations, 'Across all your vehicles', 'amber', 'flag') }}
+  {{ stat('Outstanding', totals.fine_total|inr(0), '<b>' ~ totals.unpaid ~ '</b> unpaid fine' ~ ('s' if totals.unpaid != 1 else ''), 'red', 'rupee') }}
+  {{ stat('Paid to date', totals.paid_total|inr(0), 'Thank you for paying on time', 'green', 'check-circle') }}
+</div>
+
+<div class="grid grid-main">
+  <section class="card"><div class="card-head"><div><h3>Road-safety score</h3><p>Based on your last 12 months · indicative only</p></div></div>
+    <div class="card-body" style="display:flex;gap:26px;align-items:center;flex-wrap:wrap">
+      {% set col = '#12a36b' if score.value >= 85 else '#2f5bea' if score.value >= 65 else '#e07b00' if score.value >= 40 else '#d92d4a' %}
+      <div class="score-ring"><svg viewBox="0 0 120 120" width="132" height="132" role="img" aria-label="Safety score {{ score.value }} out of 100"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--slate-soft)" stroke-width="12"/><circle cx="60" cy="60" r="52" fill="none" stroke="{{ col }}" stroke-width="12" stroke-linecap="round" stroke-dasharray="{{ (score.value / 100 * 326.7)|round(1) }} 326.7" transform="rotate(-90 60 60)"/></svg><div class="score-val"><div><b>{{ score.value }}</b><small>out of 100</small></div></div></div>
+      <div style="flex:1;min-width:220px"><h3 style="font-size:18px;color:{{ col }}">{{ score.label }}</h3>
+        <p class="muted" style="margin-top:6px">{{ score.recent }} violation{{ 's' if score.recent != 1 }} in the last 12 months{% if score.overdue %} · {{ score.overdue }} overdue fine{{ 's' if score.overdue != 1 }}{% endif %}.</p>
+        <p style="margin-top:10px">{% if score.value >= 85 %}Keep it up — safe driving keeps your record clean.{% else %}Paying fines on time and avoiding repeat offences will raise your score.{% endif %}</p></div></div></section>
+  <section class="card"><div class="card-head"><h3>My profile</h3></div><div class="card-body"><dl class="kv" style="grid-template-columns:110px 1fr">
+    <dt>Name</dt><dd>{{ driver.name }}</dd><dt>Licence</dt><dd class="mono">{{ driver.license_no }}</dd><dt>Mobile</dt><dd class="mono">{{ driver.phone|mask_phone }}</dd></dl>
+    <div class="notice info" style="margin-top:16px">{{ icon('info','icon-sm') }}<div>To change these details, please contact the administrator.</div></div></div></section>
+</div>
+
+<section class="card"><div class="card-head"><div><h3>My vehicles</h3></div></div><div class="table-wrap"><table><thead><tr><th>Registration</th><th>Type</th><th>Violations</th></tr></thead><tbody>
+{% for v in vehicles %}<tr><td>{{ plate(v.registration_no) }}</td><td>{{ v.vehicle_type }}</td><td>{% if v.violation_count %}<span class="tag">{{ v.violation_count }}</span>{% else %}<span class="status paid">Clean</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="3">{{ empty('truck','No vehicles linked','Please contact the administrator to link your vehicles.') }}</td></tr>{% endfor %}</tbody></table></div></section>
+
+<section class="card"><div class="card-head"><div><h3>Violation history</h3><p>Only records for your registered vehicles are shown.</p></div></div>
+  <div class="toolbar"><div class="chip-row" data-filter-group="#history" data-search="#history-search">
+    <button class="chip active" data-value="all" type="button">All</button><button class="chip" data-value="unpaid" type="button">Unpaid</button><button class="chip" data-value="overdue" type="button">Overdue</button><button class="chip" data-value="paid" type="button">Paid</button><button class="chip" data-value="waived" type="button">Waived</button></div>
+    <div class="search" style="max-width:300px;margin-left:auto">{{ icon('search') }}<input type="search" id="history-search" placeholder="Search history…" aria-label="Search history"></div></div>
+  <div class="table-wrap"><table id="history"><thead><tr><th>Record</th><th>Vehicle</th><th>Violation</th><th>Date</th><th class="num">Fine</th><th>Status</th><th class="num">Actions</th></tr></thead><tbody>
+  {% for r in records %}<tr data-status="{{ r.display_status|lower }}{{ ' unpaid' if r.overdue else '' }}"><td><a href="{{ url_for('violation_detail', record_id=r.record_id) }}">#{{ r.record_id }}</a></td><td>{{ plate(r.registration_no) }}</td><td>{{ r.violation_type }}<div class="cell-sub">{{ r.location }}</div></td><td class="nowrap">{{ r.violation_date|dfmt }}</td><td class="num mono">{{ r.fine_amount|inr }}</td>
+    <td>{{ status_badge(r) }}{% if r.appeal_status %}<div class="cell-sub">Appeal {{ r.appeal_status|lower }}</div>{% endif %}</td>
+    <td><div class="actions">{% if r.status == 'Unpaid' %}<a class="btn btn-small btn-primary" href="{{ url_for('pay_fine', record_id=r.record_id) }}">Pay</a>{% elif r.status == 'Paid' %}<a class="btn btn-small" href="{{ url_for('receipt', record_id=r.record_id) }}">{{ icon('file','icon-sm') }} Receipt</a>{% endif %}
+      <a class="btn btn-small" href="{{ url_for('violation_detail', record_id=r.record_id) }}" title="Details">{{ icon('eye','icon-sm') }}<span class="sr-only">Details</span></a></div></td></tr>
+  {% endfor %}</tbody></table>
+  <div class="js-empty" {% if records %}hidden{% endif %}>{{ empty('shield', 'Clean record' if not records else 'Nothing matches', 'No violations are recorded against your vehicles.' if not records else 'Try another filter or search term.') }}</div></div></section>
+
+<section id="traffic">
+  <div class="page-head"><div><h2>Live traffic around Kolkata</h2><p>Check reported incidents before you travel.</p></div><span class="live-indicator"><i></i> LIVE MONITORING</span></div>
+  {{ traffic_panel('Tap an alert to see it on the map') }}
+</section>
+</div>
+{% endblock %}

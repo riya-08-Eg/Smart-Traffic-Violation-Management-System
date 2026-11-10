@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf, plate, empty %}
+{% block title %}Appeals | TrafficSafe{% endblock %}
+{% block heading %}Appeals{% endblock %}
+{% block crumbs %}<span>Admin</span><span>/</span><span>Appeals</span>{% endblock %}
+{% block content %}
+<div class="stack">
+<div class="page-head"><div><h2>Fine appeals</h2><p>Review challenges raised by drivers. Approving an appeal waives the fine.</p></div>
+  <div class="chip-row">{% for s in ['Pending','Approved','Rejected','All'] %}<a class="chip {{ 'active' if flt==s }}" href="{{ url_for('appeals', status=s) }}">{{ s }}{% if s != 'All' %} · {{ counts.get(s, 0) }}{% endif %}</a>{% endfor %}</div></div>
+{% for a in appeals %}
+<div class="card"><div class="card-head"><div><h3><a href="{{ url_for('violation_detail', record_id=a.record_id) }}">Violation #{{ a.record_id }}</a> · {{ a.violation_type }}</h3>
+  <p>{{ plate(a.registration_no) }} · {{ a.driver_name }} ({{ a.license_no }}) · {{ a.fine_amount|inr }} · {{ a.violation_date|dfmt }} · {{ a.location }}</p></div><span class="status {{ a.status|lower }}">{{ a.status }}</span></div>
+  <div class="card-body"><p class="cell-sub">Submitted {{ a.created_at|dtfmt }}</p><p style="margin-top:6px">{{ a.reason }}</p>
+  {% if a.status == 'Pending' %}
+  <form method="post" action="{{ url_for('resolve_appeal', appeal_id=a.appeal_id) }}" class="stack" style="gap:12px;margin-top:16px">{{ csrf() }}
+    <label>Remark to driver <span class="optional-tag">Required when rejecting</span><input name="remark" maxlength="255" placeholder="e.g. Evidence verified — the offence stands."></label>
+    <div class="page-actions"><button class="btn btn-success" name="decision" value="Approved" type="submit">{{ icon('check') }} Approve &amp; waive fine</button><button class="btn btn-danger" name="decision" value="Rejected" type="submit">{{ icon('x') }} Reject</button></div></form>
+  {% elif a.admin_remark %}<div class="notice info" style="margin-top:14px">{{ icon('info','icon-sm') }}<div><b>Remark:</b> {{ a.admin_remark }}</div></div>{% endif %}</div></div>
+{% else %}<div class="card">{{ empty('message', 'No appeals here', 'When drivers challenge a fine, their appeals will show up for review.') }}</div>{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, stat, status_badge, plate, empty %}
+{% block title %}{{ driver.name }} | TrafficSafe{% endblock %}
+{% block heading %}Driver profile{% endblock %}
+{% block crumbs %}<a href="{{ url_for('drivers') }}">Drivers</a><span>/</span><span>{{ driver.name }}</span>{% endblock %}
+{% block content %}
+<div class="stack">
+<div class="page-head"><div style="display:flex;gap:14px;align-items:center"><span class="avatar" style="width:52px;height:52px;font-size:20px">{{ driver.name[:1]|upper }}</span><div><h2>{{ driver.name }}</h2><p>Licence <b class="mono">{{ driver.license_no }}</b> · Mobile <b class="mono">{{ driver.phone or '—' }}</b></p></div></div>
+  <div class="page-actions"><a class="btn" href="{{ url_for('drivers') }}">{{ icon('left') }} Back</a><a class="btn btn-primary" href="{{ url_for('edit_driver', driver_id=driver.driver_id) }}">{{ icon('edit') }} Edit driver</a></div></div>
+<div class="grid grid-4">
+  {{ stat('Vehicles', vehicles|length, 'Registered to this driver', 'violet', 'truck') }}
+  {{ stat('Violations', totals.violations, 'All time', 'amber', 'flag') }}
+  {{ stat('Unpaid fines', totals.unpaid|inr(0), 'Outstanding balance', 'red', 'rupee') }}
+  {{ stat('Fines paid', totals.paid|inr(0), 'Collected so far', 'green', 'check-circle') }}
+</div>
+<div class="card"><div class="card-head"><h3>Vehicles</h3></div><div class="table-wrap"><table><thead><tr><th>Registration</th><th>Type</th></tr></thead><tbody>
+{% for v in vehicles %}<tr><td>{{ plate(v.registration_no) }}</td><td>{{ v.vehicle_type }}</td></tr>{% else %}<tr><td colspan="2">{{ empty('truck','No vehicles','Register a vehicle for this driver from the Vehicles page.') }}</td></tr>{% endfor %}</tbody></table></div></div>
+<div class="card"><div class="card-head"><h3>Violation history</h3></div><div class="table-wrap"><table><thead><tr><th>Record</th><th>Vehicle</th><th>Violation</th><th>Date</th><th class="num">Fine</th><th>Status</th></tr></thead><tbody>
+{% for r in records %}<tr><td><a href="{{ url_for('violation_detail', record_id=r.record_id) }}">#{{ r.record_id }}</a></td><td>{{ plate(r.registration_no) }}</td><td>{{ r.violation_type }}<div class="cell-sub">{{ r.location }}</div></td><td class="nowrap">{{ r.violation_date|dfmt }}</td><td class="num mono">{{ r.fine_amount|inr }}</td><td>{{ status_badge(r) }}</td></tr>
+{% else %}<tr><td colspan="6">{{ empty('shield','Clean record','No violations are linked to this driver.') }}</td></tr>{% endfor %}</tbody></table></div></div>
+</div>
+{% endblock %}

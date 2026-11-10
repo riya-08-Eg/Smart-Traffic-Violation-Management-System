@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, plate %}
+{% block title %}Receipt {{ r.payment_ref or r.record_id }} | TrafficSafe{% endblock %}
+{% block heading %}Payment receipt{% endblock %}
+{% block crumbs %}<a href="{{ url_for('driver_dashboard' if session.user_role == 'driver' else 'violations') }}">Back</a><span>/</span><span>Receipt</span>{% endblock %}
+{% block content %}
+<div class="page-head no-print" style="max-width:640px;margin:0 auto 16px"><div><h2>Payment received</h2><p>Keep this receipt for your records.</p></div><button class="btn btn-primary" type="button" onclick="window.print()">{{ icon('printer') }} Print / save as PDF</button></div>
+<article class="receipt">
+  <div class="receipt-head"><div><div style="font-size:12px;letter-spacing:.14em;opacity:.8">TRAFFICSAFE</div><div style="font-size:22px;font-weight:800">Fine payment receipt</div></div><span class="stamp" style="color:#fff;border-color:#fff">PAID</span></div>
+  <div class="receipt-body"><dl class="kv">
+    <dt>Receipt no.</dt><dd class="mono">{{ r.payment_ref or ('REC-' ~ r.record_id) }}</dd><dt>Paid on</dt><dd>{{ r.payment_date|dtfmt }}</dd><dt>Payment method</dt><dd>{{ r.payment_method or '—' }}</dd>
+    <dt>Driver</dt><dd>{{ r.driver_name }} <span class="mono" style="font-weight:400;color:#667085">({{ r.license_no }})</span></dd><dt>Vehicle</dt><dd>{{ plate(r.registration_no) }}</dd>
+    <dt>Violation</dt><dd>#{{ r.record_id }} · {{ r.violation_type }}</dd><dt>Date &amp; place</dt><dd>{{ r.violation_date|dfmt }} · {{ r.location }}</dd></dl>
+    <div class="receipt-total"><span>Total paid</span><span>{{ r.fine_amount|inr }}</span></div>
+    <p style="margin-top:22px;font-size:12px;color:#667085">This is a computer-generated receipt from an academic demonstration project and is not an official government document.</p></div>
+</article>
+{% endblock %}

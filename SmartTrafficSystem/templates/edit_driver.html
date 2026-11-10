@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf %}
+{% block title %}Edit driver | TrafficSafe{% endblock %}
+{% block heading %}Edit driver{% endblock %}
+{% block crumbs %}<a href="{{ url_for('drivers') }}">Drivers</a><span>/</span><span>Edit</span>{% endblock %}
+{% block content %}
+<div class="card narrow"><div class="card-head"><div><h3>Update driver details</h3><p>Changing the licence or mobile number changes how this driver signs in.</p></div></div>
+<div class="card-body"><form method="post" class="form-grid" style="grid-template-columns:1fr 1fr">{{ csrf() }}
+<label class="span-all">Full name <span class="req">*</span><input name="name" required minlength="2" maxlength="100" pattern="[A-Za-z][A-Za-z .'’\-]{1,98}" value="{{ driver.name }}"></label>
+<label>Licence number <span class="req">*</span><input name="license_no" required minlength="5" maxlength="40" pattern="[A-Za-z0-9/\-]{5,40}" value="{{ driver.license_no }}"></label>
+<label>Mobile number <span class="req">*</span><input name="phone" required inputmode="numeric" minlength="10" maxlength="10" pattern="[6-9][0-9]{9}" value="{{ driver.phone or '' }}"></label>
+<div class="form-actions"><a class="btn" href="{{ url_for('drivers') }}">Cancel</a><button class="btn btn-primary" type="submit">{{ icon('check') }} Save changes</button></div></form></div></div>
+{% endblock %}

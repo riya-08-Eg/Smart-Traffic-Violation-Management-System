@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf, confirm_button, pagination, empty, plate %}
+{% block title %}Vehicles | TrafficSafe{% endblock %}
+{% block heading %}Vehicles{% endblock %}
+{% block crumbs %}<span>Admin</span><span>/</span><span>Vehicles</span>{% endblock %}
+{% block content %}
+<div class="stack">
+<div class="page-head"><div><h2>Vehicle registry</h2><p>Register vehicles and link each one to its driver.</p></div>
+  <div class="page-actions"><a class="btn" href="{{ url_for('export_csv', kind='vehicles') }}">{{ icon('download') }} Export CSV</a>
+  <button class="btn btn-primary" type="button" data-toggle="#add-panel" aria-expanded="{{ 'true' if form else 'false' }}">{{ icon('plus') }} Register vehicle</button></div></div>
+
+{% if not drivers %}<div class="notice">{{ icon('alert','icon-sm') }}<div>Add at least one <a href="{{ url_for('drivers') }}">driver</a> before registering a vehicle.</div></div>{% endif %}
+<div class="card panel" id="add-panel" {% if not form %}hidden{% endif %}><div class="card-head"><div><h3>Register a vehicle</h3><p>Use an Indian registration number, e.g. WB-01-AB-1234.</p></div></div>
+  <div class="card-body"><form method="post" class="form-grid">{{ csrf() }}
+    <label>Registration number <span class="req">*</span><input name="registration_no" required maxlength="20" style="text-transform:uppercase" pattern="[A-Za-z]{2}[\- ]?[0-9]{1,2}[\- ]?[A-Za-z]{1,3}[\- ]?[0-9]{4}" title="Example: WB-01-AB-1234" placeholder="WB-01-AB-1234" value="{{ form.get('registration_no','') }}"></label>
+    <label>Vehicle type <span class="req">*</span><select name="vehicle_type" required><option value="">Select type</option>{% for t in vehicle_types %}<option {% if form.get('vehicle_type')==t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+    <label>Linked driver <span class="req">*</span><select name="driver_id" required><option value="">Select driver</option>{% for d in drivers %}<option value="{{ d.driver_id }}" {% if form.get('driver_id')|string==d.driver_id|string %}selected{% endif %}>{{ d.name }} — {{ d.license_no }}</option>{% endfor %}</select></label>
+    <div class="form-actions"><button class="btn" type="button" data-toggle="#add-panel">Cancel</button><button class="btn btn-primary" type="submit" {% if not drivers %}disabled{% endif %}>{{ icon('check') }} Register vehicle</button></div></form></div></div>
+
+<div class="card">
+  <form class="toolbar" method="get" data-autosubmit><div class="search">{{ icon('search') }}<input type="search" name="q" value="{{ q }}" placeholder="Search by registration or driver…" aria-label="Search vehicles"></div>
+    <div class="filters"><select name="type" aria-label="Vehicle type"><option value="">All types</option>{% for t in vehicle_types %}<option {% if vtype==t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></div>
+    {% if q or vtype %}<a class="btn" href="{{ url_for('vehicles') }}">{{ icon('x','icon-sm') }} Clear</a>{% endif %}<span class="muted" style="margin-left:auto">{{ pg.total }} vehicle{{ 's' if pg.total != 1 }}</span></form>
+  <div class="table-wrap"><table><thead><tr><th>Registration</th><th>Type</th><th>Driver</th><th>Violations</th><th class="num">Actions</th></tr></thead><tbody>
+  {% for v in vehicles %}<tr><td>{{ plate(v.registration_no) }}<div class="cell-sub">ID #{{ v.vehicle_id }}</div></td><td>{{ v.vehicle_type }}</td>
+    <td>{% if v.driver_id %}<a href="{{ url_for('driver_detail', driver_id=v.driver_id) }}">{{ v.driver_name }}</a>{% else %}<span class="muted">Not linked</span>{% endif %}</td>
+    <td>{% if v.violation_count %}<a class="tag" href="{{ url_for('violations', q=v.registration_no) }}">{{ v.violation_count }}</a>{% else %}<span class="muted">0</span>{% endif %}</td>
+    <td><div class="actions"><a class="btn btn-small" href="{{ url_for('edit_vehicle', vehicle_id=v.vehicle_id) }}" title="Edit">{{ icon('edit','icon-sm') }}<span class="sr-only">Edit</span></a>
+      {{ confirm_button(url_for('delete_vehicle', vehicle_id=v.vehicle_id), 'Delete vehicle', 'Delete vehicle ' ~ v.registration_no ~ '? Vehicles with violation records cannot be deleted.', title='Delete vehicle?') }}</div></td></tr>
+  {% else %}<tr><td colspan="5">{{ empty('truck', 'No vehicles found' if (q or vtype) else 'No vehicles yet', 'Try different filters.' if (q or vtype) else 'Register a vehicle and link it to a driver.') }}</td></tr>{% endfor %}
+  </tbody></table></div>{{ pagination(pg) }}</div>
+</div>
+{% endblock %}

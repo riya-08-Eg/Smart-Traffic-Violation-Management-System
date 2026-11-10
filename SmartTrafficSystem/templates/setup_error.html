@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Database setup needed | TrafficSafe{% endblock %}
+{% block heading %}Database setup needed{% endblock %}
+{% block content %}
+<div class="card narrow"><div class="card-body"><div class="dialog-icon tone-red">{{ icon('alert','icon-lg') }}</div><h3>Could not reach the database</h3>
+<p class="muted" style="margin:8px 0 14px">Check that MySQL is running, that <code>database/schema.sql</code> has been executed, and that your database credentials (<code>DB_HOST</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code>, <code>DB_NAME</code>) are correct.</p>
+<pre style="background:var(--slate-soft);padding:12px;border-radius:10px;overflow:auto;font-size:12.5px">{{ error }}</pre>
+<div class="page-actions" style="margin-top:16px"><a class="btn btn-primary" href="{{ url_for('home') }}">Try again</a></div></div></div>
+{% endblock %}

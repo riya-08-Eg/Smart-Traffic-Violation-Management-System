@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf, plate %}
+{% block title %}Pay fine | TrafficSafe{% endblock %}
+{% block heading %}Pay fine{% endblock %}
+{% block crumbs %}<a href="{{ url_for('driver_dashboard') }}">My dashboard</a><span>/</span><span>Pay fine</span>{% endblock %}
+{% block content %}
+<div class="grid grid-2" style="max-width:920px">
+  <div class="card"><div class="card-head"><h3>Payment summary</h3></div><div class="card-body"><dl class="kv" style="grid-template-columns:120px 1fr">
+    <dt>Violation</dt><dd>{{ r.violation_type }}</dd><dt>Vehicle</dt><dd>{{ plate(r.registration_no) }}</dd><dt>Date</dt><dd>{{ r.violation_date|dfmt }}</dd><dt>Location</dt><dd>{{ r.location }}</dd><dt>Due date</dt><dd>{{ r.due_date|dfmt }} {% if r.overdue %}<span class="status overdue">Overdue</span>{% endif %}</dd></dl>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px dashed var(--line-strong);margin-top:18px;padding-top:16px"><span class="muted">Amount payable</span><b style="font-size:28px">{{ r.fine_amount|inr }}</b></div></div></div>
+  <div class="card"><div class="card-head"><h3>Choose payment method</h3></div><div class="card-body">
+    <form method="post" class="stack" style="gap:16px">{{ csrf() }}
+      <div class="pay-methods">{% for m in methods %}<label class="pay-option"><input type="radio" name="method" value="{{ m }}" required {% if loop.first %}checked{% endif %}>{{ icon('card' if 'card' in m else 'phone' if m == 'UPI' else 'shield') }} {{ m }}</label>{% endfor %}</div>
+      <div class="notice info">{{ icon('info','icon-sm') }}<div><b>Demo payment.</b> No real money is charged. This simulates the payment flow for the academic project.</div></div>
+      <button class="btn btn-primary btn-lg btn-block" type="submit">{{ icon('lock') }} Pay {{ r.fine_amount|inr }}</button>
+      <a class="btn btn-block" href="{{ url_for('violation_detail', record_id=r.record_id) }}">Cancel</a></form></div></div>
+</div>
+{% endblock %}

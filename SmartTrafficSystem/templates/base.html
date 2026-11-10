@@ -1,0 +1,58 @@
+{% from "_macros.html" import icon, csrf %}
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}TrafficSafe{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script>try{var t=localStorage.getItem('ts-theme');if(t)document.documentElement.dataset.theme=t;else if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}</script>
+</head>
+<body>
+{% include "_sprite.html" %}
+<a class="skip-link" href="#main-content">Skip to content</a>
+{% set role = session.get('user_role') %}
+<aside class="sidebar" id="sidebar" aria-label="Main navigation">
+  <a class="brand" href="{{ url_for('home') }}"><span class="brand-icon">{{ icon('navigation','icon-lg') }}</span><div><strong>TrafficSafe</strong><small>ROAD SAFETY PORTAL</small></div></a>
+  {% if role == 'admin' %}
+  <div class="nav-label">ADMIN WORKSPACE</div>
+  <nav>
+  <a class="nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">{{ icon('grid') }}<span>Dashboard</span></a>
+  <a class="nav-link {% if request.endpoint in ['drivers','edit_driver','driver_detail'] %}active{% endif %}" href="{{ url_for('drivers') }}">{{ icon('users') }}<span>Drivers</span></a>
+  <a class="nav-link {% if request.endpoint in ['vehicles','edit_vehicle'] %}active{% endif %}" href="{{ url_for('vehicles') }}">{{ icon('truck') }}<span>Vehicles</span></a>
+  <a class="nav-link {% if request.endpoint in ['violations','edit_violation','violation_detail'] %}active{% endif %}" href="{{ url_for('violations') }}">{{ icon('flag') }}<span>Violations</span></a>
+  <a class="nav-link {% if request.endpoint == 'appeals' %}active{% endif %}" href="{{ url_for('appeals') }}">{{ icon('message') }}<span>Appeals</span>{% if pending_appeals %}<span class="nav-badge" title="{{ pending_appeals }} pending">{{ pending_appeals }}</span>{% endif %}</a>
+  </nav>
+  {% elif role == 'driver' %}
+  <div class="nav-label">DRIVER WORKSPACE</div>
+  <nav><a class="nav-link {% if request.endpoint in ['driver_dashboard','violation_detail','pay_fine','receipt'] %}active{% endif %}" href="{{ url_for('driver_dashboard') }}">{{ icon('grid') }}<span>My dashboard</span></a>
+  <a class="nav-link" href="{{ url_for('driver_dashboard') }}#traffic">{{ icon('activity') }}<span>Live traffic</span></a>
+  <a class="nav-link" href="{{ url_for('driver_export') }}">{{ icon('download') }}<span>Download my records</span></a></nav>
+  {% endif %}
+  <div class="sidebar-help"><strong>{{ icon('shield','icon-sm') }} Safer roads start here</strong><p>Keep records organised, pay fines on time and stay informed about road conditions.</p></div>
+  <div class="sidebar-footer">DBMS PBL project · Academic demonstration</div>
+</aside>
+<div class="scrim" id="scrim"></div>
+<div class="main">
+  <header class="topbar">
+    <button class="btn btn-icon btn-ghost menu-btn" id="menu-btn" type="button" aria-label="Open menu" aria-controls="sidebar">{{ icon('menu') }}</button>
+    <div class="topbar-title">
+      <div class="crumbs">{% block crumbs %}<span>TrafficSafe</span>{% endblock %}</div>
+      <h1>{% block heading %}Dashboard{% endblock %}</h1>
+    </div>
+    <button class="btn btn-icon btn-ghost" id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode"><span class="theme-sun">{{ icon('sun') }}</span><span class="theme-moon" hidden>{{ icon('moon') }}</span></button>
+    <div class="user-chip"><span class="avatar" aria-hidden="true">{{ 'A' if role == 'admin' else (session.get('display_name','D')[:1]|upper) }}</span>
+      <div><strong>{{ session.get('display_name','User') }}</strong><small>{{ 'Administrator' if role == 'admin' else 'Registered driver' }}</small></div>
+      <form method="post" action="{{ url_for('logout') }}">{{ csrf() }}<button class="btn btn-icon btn-ghost" type="submit" aria-label="Sign out" title="Sign out">{{ icon('logout') }}</button></form></div>
+  </header>
+  <div class="toast-stack" id="toasts" role="status" aria-live="polite">
+  {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}
+    <div class="flash {{ category }}">{{ icon('check-circle' if category == 'success' else 'alert' if category == 'error' else 'info') }}<span>{{ message }}</span><button type="button" aria-label="Dismiss" data-dismiss>{{ icon('x','icon-sm') }}</button></div>
+  {% endfor %}{% endwith %}</div>
+  <section class="content" id="main-content">{% block content %}{% endblock %}</section>
+  <footer class="page-footer">Smart Traffic Violation &amp; Road Safety Management System · DBMS PBL</footer>
+</div>
+<dialog id="confirm-dialog"><div class="dialog-body"><div class="dialog-icon tone-red">{{ icon('alert','icon-lg') }}</div><h3 id="confirm-title">Are you sure?</h3><p id="confirm-text"></p></div>
+  <div class="dialog-actions"><button class="btn" type="button" id="confirm-cancel">Cancel</button><button class="btn btn-primary" style="background:var(--red);border-color:var(--red);color:#fff" type="button" id="confirm-ok">Confirm</button></div></dialog>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body></html>

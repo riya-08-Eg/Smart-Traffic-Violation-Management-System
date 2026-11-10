@@ -1,0 +1,45 @@
+{% macro icon(name, cls='') %}<svg class="icon {{ cls }}" aria-hidden="true"><use href="#i-{{ name }}"/></svg>{% endmacro %}
+
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro status_badge(r) %}<span class="status {{ r.display_status|lower }}">{{ r.display_status }}</span>{% endmacro %}
+
+{% macro plate(reg) %}<span class="plate">{{ reg }}</span>{% endmacro %}
+
+{% macro empty(icon_name, title, text) %}<div class="empty-state"><div class="empty-icon">{{ icon(icon_name, 'icon-lg') }}</div><h4>{{ title }}</h4><p>{{ text }}</p></div>{% endmacro %}
+
+{# Delete / destructive button that opens the confirmation dialog #}
+{% macro confirm_button(action, label, message, next=None, title='Are you sure?') %}
+<form method="post" action="{{ action }}" data-confirm="{{ message }}" data-confirm-title="{{ title }}" data-confirm-label="{{ label }}">{{ csrf() }}{% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}<button class="btn btn-small btn-danger" type="submit" title="{{ label }}">{{ icon('trash','icon-sm') }}<span class="sr-only">{{ label }}</span></button></form>
+{% endmacro %}
+
+{% macro pagination(pg) %}
+{% if pg.total %}
+<div class="table-foot"><span>Showing <b>{{ pg.first }}–{{ pg.last }}</b> of <b>{{ pg.total }}</b></span>
+{% if pg.pages > 1 %}<nav class="pager" aria-label="Pagination">
+{% set args = request.args.to_dict() %}
+{% if pg.page > 1 %}<a href="{{ url_for(request.endpoint, **dict(args, page=pg.page-1)) }}" aria-label="Previous page">{{ icon('left','icon-sm') }}</a>{% else %}<span class="disabled">{{ icon('left','icon-sm') }}</span>{% endif %}
+{% for p in range(1, pg.pages+1) %}{% if p == 1 or p == pg.pages or (p - pg.page)|abs <= 1 %}{% if p == pg.page %}<span class="current" aria-current="page">{{ p }}</span>{% else %}<a href="{{ url_for(request.endpoint, **dict(args, page=p)) }}">{{ p }}</a>{% endif %}{% elif (p - pg.page)|abs == 2 %}<span style="border:0">…</span>{% endif %}{% endfor %}
+{% if pg.page < pg.pages %}<a href="{{ url_for(request.endpoint, **dict(args, page=pg.page+1)) }}" aria-label="Next page">{{ icon('right','icon-sm') }}</a>{% else %}<span class="disabled">{{ icon('right','icon-sm') }}</span>{% endif %}
+</nav>{% endif %}</div>
+{% endif %}
+{% endmacro %}
+
+{% macro stat(label, value, foot, tone='blue', icon_name='grid', href=None) %}
+<{{ 'a' if href else 'div' }} class="card stat" {% if href %}href="{{ href }}"{% endif %}><div class="stat-top"><span>{{ label }}</span><span class="stat-icon tone-{{ tone }}">{{ icon(icon_name) }}</span></div><div class="stat-number">{{ value }}</div><div class="stat-foot">{{ foot|safe }}</div></{{ 'a' if href else 'div' }}>
+{% endmacro %}
+
+{% macro traffic_panel(sub) %}
+<div class="traffic-layout">
+  <div class="card"><div class="card-head"><div><h3>Traffic incident map</h3><p>{{ sub }}</p></div><span id="traffic-updated" class="muted" style="font-size:12.5px">Waiting for live data…</span></div>
+    <div id="traffic-map" role="application" aria-label="Map showing live traffic incidents"></div>
+    <div class="map-legend"><span><i class="legend-red"></i>Accident / closure / flooding</span><span><i class="legend-orange"></i>Heavy traffic / road works</span></div></div>
+  <div class="card alerts-card"><div class="card-head"><div><h3>Current alerts</h3><p>Refreshes every minute</p></div><span id="incident-count" class="tag">—</span></div>
+    <div class="chip-row" style="padding:12px 14px 0" id="alert-filters"><button class="chip active" type="button" data-f="all">All</button><button class="chip" type="button" data-f="severe">Severe</button><button class="chip" type="button" data-f="other">Other</button></div>
+    <div id="traffic-alert-list" class="traffic-alert-list" aria-live="polite"><p class="muted traffic-empty">Loading live traffic alerts…</p></div>
+    <div class="alerts-foot">Always follow on-road signs and instructions from traffic police.</div></div>
+</div>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="{{ url_for('static', filename='traffic.js') }}"></script>
+{% endmacro %}

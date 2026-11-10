@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf, status_badge, plate, confirm_button %}
+{% set is_admin = session.user_role == 'admin' %}
+{% block title %}Violation #{{ r.record_id }} | TrafficSafe{% endblock %}
+{% block heading %}Violation #{{ r.record_id }}{% endblock %}
+{% block crumbs %}<a href="{{ url_for('violations' if is_admin else 'driver_dashboard') }}">{{ 'Violations' if is_admin else 'My dashboard' }}</a><span>/</span><span>#{{ r.record_id }}</span>{% endblock %}
+{% block content %}
+<div class="stack">
+<div class="page-head"><div><h2>{{ r.violation_type }} {{ status_badge(r) }}</h2><p>{{ plate(r.registration_no) }} · {{ r.violation_date|dfmt }} · {{ r.location }}</p></div>
+  <div class="page-actions no-print">
+    <button class="btn" type="button" onclick="window.print()">{{ icon('printer') }} Print notice</button>
+    {% if r.status == 'Paid' %}<a class="btn" href="{{ url_for('receipt', record_id=r.record_id) }}">{{ icon('file') }} Receipt</a>{% endif %}
+    {% if is_admin %}<a class="btn" href="{{ url_for('edit_violation', record_id=r.record_id) }}">{{ icon('edit') }} Edit</a>
+      {% if r.status == 'Unpaid' %}<form method="post" action="{{ url_for('mark_paid', record_id=r.record_id) }}">{{ csrf() }}<input type="hidden" name="next" value="{{ url_for('violation_detail', record_id=r.record_id) }}"><button class="btn btn-success" type="submit">{{ icon('check') }} Mark as paid</button></form>{% endif %}
+    {% elif r.status == 'Unpaid' %}<a class="btn btn-primary" href="{{ url_for('pay_fine', record_id=r.record_id) }}">{{ icon('card') }} Pay {{ r.fine_amount|inr }}</a>{% endif %}</div></div>
+
+{% if r.overdue %}<div class="notice danger">{{ icon('alert','icon-sm') }}<div><b>This fine is overdue.</b> It was due on {{ r.due_date|dfmt }}. Please pay as soon as possible{% if not is_admin %} or submit an appeal if you believe it is incorrect{% endif %}.</div></div>{% endif %}
+
+<div class="grid grid-main">
+  <div class="stack">
+    <div class="card"><div class="card-head"><h3>Violation details</h3></div><div class="card-body"><dl class="kv">
+      <dt>Record</dt><dd>#{{ r.record_id }}</dd><dt>Offence</dt><dd>{{ r.violation_type }}</dd><dt>Date of offence</dt><dd>{{ r.violation_date|dfmt }}</dd><dt>Location</dt><dd>{{ r.location or '—' }}</dd>
+      <dt>Vehicle</dt><dd>{{ plate(r.registration_no) }} <span class="muted" style="font-weight:400">· {{ r.vehicle_type }}</span></dd>
+      <dt>Registered driver</dt><dd>{% if is_admin and r.owner_id %}<a href="{{ url_for('driver_detail', driver_id=r.owner_id) }}">{{ r.driver_name }}</a>{% else %}{{ r.driver_name or '—' }}{% endif %}{% if r.license_no %}<div class="cell-sub mono" style="font-weight:400">{{ r.license_no }}</div>{% endif %}</dd>
+      <dt>Fine amount</dt><dd style="font-size:20px">{{ r.fine_amount|inr }}</dd><dt>Pay by</dt><dd>{{ r.due_date|dfmt }}</dd></dl></div></div>
+    <div class="card"><div class="card-head"><h3>Evidence</h3></div><div class="card-body">{% if r.evidence_photo %}<a href="{{ url_for('evidence', filename=r.evidence_photo) }}" target="_blank" rel="noopener"><img class="evidence-img" src="{{ url_for('evidence', filename=r.evidence_photo) }}" alt="Evidence photo for violation {{ r.record_id }}"></a>{% else %}<p class="muted">No evidence photo was attached to this record.</p>{% endif %}</div></div>
+  </div>
+  <div class="stack">
+    <div class="card"><div class="card-head"><h3>Progress</h3></div><div class="card-body"><ol class="timeline">
+      <li class="done"><strong>Violation recorded</strong><small>{{ r.violation_date|dfmt }}</small></li>
+      {% if appeal %}<li class="{{ 'done' if appeal.status != 'Pending' else '' }}"><strong>Appeal {{ appeal.status|lower }}</strong><small>Submitted {{ appeal.created_at|dtfmt }}</small></li>{% endif %}
+      {% if r.status == 'Paid' %}<li class="done"><strong>Fine paid</strong><small>{{ r.payment_date|dtfmt }}{% if r.payment_method %} · {{ r.payment_method }}{% endif %}</small></li>
+      {% elif r.status == 'Waived' %}<li class="done"><strong>Fine waived</strong><small>Appeal approved</small></li>
+      {% else %}<li class="todo"><strong>Awaiting payment</strong><small>{{ 'Overdue since ' if r.overdue else 'Due by ' }}{{ r.due_date|dfmt }}</small></li>{% endif %}</ol></div></div>
+
+    {% if appeal %}<div class="card"><div class="card-head"><h3>Appeal</h3><span class="status {{ appeal.status|lower }}">{{ appeal.status }}</span></div><div class="card-body">
+      <p class="cell-sub" style="margin-bottom:6px">Reason given by driver</p><p>{{ appeal.reason }}</p>
+      {% if appeal.admin_remark %}<p class="cell-sub" style="margin:14px 0 6px">Administrator’s remark</p><p>{{ appeal.admin_remark }}</p>{% endif %}
+      {% if is_admin and appeal.status == 'Pending' %}<a class="btn btn-primary btn-small" style="margin-top:14px" href="{{ url_for('appeals') }}">Review appeal</a>{% endif %}</div></div>
+    {% elif not is_admin and r.status == 'Unpaid' %}
+    <div class="card no-print"><div class="card-head"><div><h3>Think this fine is wrong?</h3><p>You can submit one appeal per violation.</p></div></div><div class="card-body">
+      <form method="post" action="{{ url_for('submit_appeal', record_id=r.record_id) }}" class="stack" style="gap:14px">{{ csrf() }}
+        <label>Why should this fine be reviewed? <span class="req">*</span><textarea name="reason" required minlength="10" maxlength="500" placeholder="e.g. My vehicle was sold before this date / the location is incorrect…"></textarea><span class="hint">10–500 characters. Be specific and factual.</span></label>
+        <button class="btn" type="submit">{{ icon('message') }} Submit appeal</button></form></div></div>{% endif %}
+  </div>
+</div>
+</div>
+{% endblock %}

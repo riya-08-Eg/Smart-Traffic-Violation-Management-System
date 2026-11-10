@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, csrf, confirm_button, pagination, empty %}
+{% block title %}Drivers | TrafficSafe{% endblock %}
+{% block heading %}Drivers{% endblock %}
+{% block crumbs %}<span>Admin</span><span>/</span><span>Drivers</span>{% endblock %}
+{% block content %}
+<div class="stack">
+<div class="page-head"><div><h2>Driver directory</h2><p>Add drivers and keep their details up to date. Drivers sign in with their licence and mobile number.</p></div>
+  <div class="page-actions"><a class="btn" href="{{ url_for('export_csv', kind='drivers') }}">{{ icon('download') }} Export CSV</a>
+  <button class="btn btn-primary" type="button" data-toggle="#add-panel" aria-expanded="{{ 'true' if form else 'false' }}">{{ icon('plus') }} Add driver</button></div></div>
+
+<div class="card panel" id="add-panel" {% if not form %}hidden{% endif %}><div class="card-head"><div><h3>Add a driver</h3><p>Fields marked <span class="req">*</span> are required.</p></div></div>
+  <div class="card-body"><form method="post" class="form-grid">{{ csrf() }}
+    <label>Full name <span class="req">*</span><input name="name" required minlength="2" maxlength="100" pattern="[A-Za-z][A-Za-z .'’\-]{1,98}" title="Letters, spaces, apostrophes, dots or hyphens" placeholder="e.g. Rahul Das" value="{{ form.get('name','') }}"></label>
+    <label>Licence number <span class="req">*</span><input name="license_no" required minlength="5" maxlength="40" pattern="[A-Za-z0-9/\-]{5,40}" title="5–40 letters, numbers, slash or hyphen" placeholder="e.g. WB-XX-123456" value="{{ form.get('license_no','') }}"></label>
+    <label>Mobile number <span class="req">*</span><input name="phone" required inputmode="numeric" minlength="10" maxlength="10" pattern="[6-9][0-9]{9}" title="10-digit Indian mobile number" placeholder="10-digit mobile" value="{{ form.get('phone','') }}"><span class="hint">Used by the driver to sign in.</span></label>
+    <div class="form-actions"><button class="btn" type="button" data-toggle="#add-panel">Cancel</button><button class="btn btn-primary" type="submit">{{ icon('check') }} Save driver</button></div></form></div></div>
+
+<div class="card">
+  <form class="toolbar" method="get" data-autosubmit><div class="search">{{ icon('search') }}<input type="search" name="q" value="{{ q }}" placeholder="Search by name, licence or mobile…" aria-label="Search drivers"></div>
+    {% if q %}<a class="btn" href="{{ url_for('drivers') }}">{{ icon('x','icon-sm') }} Clear</a>{% endif %}<span class="muted" style="margin-left:auto">{{ pg.total }} driver{{ 's' if pg.total != 1 }}</span></form>
+  <div class="table-wrap"><table><thead><tr><th>Driver</th><th>Licence number</th><th>Mobile</th><th>Vehicles</th><th>Violations</th><th class="num">Actions</th></tr></thead><tbody>
+  {% for d in drivers %}<tr>
+    <td><a href="{{ url_for('driver_detail', driver_id=d.driver_id) }}" class="cell-main">{{ d.name }}</a><div class="cell-sub">ID #{{ d.driver_id }}</div></td>
+    <td class="mono">{{ d.license_no }}</td><td class="mono">{{ d.phone or '—' }}</td>
+    <td>{{ d.vehicle_count }}</td><td>{% if d.violation_count %}<span class="tag">{{ d.violation_count }}</span>{% else %}<span class="muted">0</span>{% endif %}</td>
+    <td><div class="actions"><a class="btn btn-small" href="{{ url_for('driver_detail', driver_id=d.driver_id) }}" title="View profile">{{ icon('eye','icon-sm') }}<span class="sr-only">View</span></a><a class="btn btn-small" href="{{ url_for('edit_driver', driver_id=d.driver_id) }}" title="Edit">{{ icon('edit','icon-sm') }}<span class="sr-only">Edit</span></a>
+      {{ confirm_button(url_for('delete_driver', driver_id=d.driver_id), 'Delete driver', 'Delete ' ~ d.name ~ '? Drivers with linked vehicles cannot be deleted. This cannot be undone.', title='Delete driver?') }}</div></td></tr>
+  {% else %}<tr><td colspan="6">{{ empty('users', 'No drivers found' if q else 'No drivers yet', 'Try a different search term.' if q else 'Add your first driver to get started.') }}</td></tr>{% endfor %}
+  </tbody></table></div>{{ pagination(pg) }}</div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% from "_macros.html" import icon, csrf %}
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sign in | TrafficSafe</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script>try{var t=localStorage.getItem('ts-theme');if(t)document.documentElement.dataset.theme=t;else if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}</script></head>
+<body class="auth-body">{% include "_sprite.html" %}
+<button class="btn btn-icon btn-ghost theme-float" id="theme-toggle" type="button" aria-label="Toggle dark mode"><span class="theme-sun">{{ icon('sun') }}</span><span class="theme-moon" hidden>{{ icon('moon') }}</span></button>
+<main class="auth-shell">
+  <section class="auth-brand">
+    <div class="brand"><span class="brand-icon">{{ icon('navigation','icon-lg') }}</span><div><strong>TrafficSafe</strong><small>ROAD SAFETY PORTAL</small></div></div>
+    <span class="pill">SMART TRAFFIC MANAGEMENT</span>
+    <h1>Safer roads.<br>Smarter decisions.</h1>
+    <p>One portal for traffic administrators and registered drivers: records, fines, appeals and live road conditions.</p>
+    <div class="auth-highlights">
+      <span>{{ icon('check') }} Role-based, secure access</span>
+      <span>{{ icon('check') }} Pay fines and download receipts online</span>
+      <span>{{ icon('check') }} Appeal a fine and track the decision</span>
+      <span>{{ icon('check') }} Live traffic awareness for Kolkata</span>
+    </div>
+  </section>
+  <section class="auth-panel">
+    <h2>Welcome back</h2><p class="muted">Sign in to continue to your workspace.</p>
+    <div class="toast-stack" id="toasts" role="status" style="position:static;width:auto;margin-top:16px">
+    {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}
+      <div class="flash {{ category }}">{{ icon('check-circle' if category == 'success' else 'alert') }}<span>{{ message }}</span></div>{% endfor %}{% endwith %}</div>
+    <form method="post" class="auth-form" id="login-form" novalidate>
+      {{ csrf() }}<input type="hidden" name="role" id="login-role" value="{{ selected }}">
+      <div class="segmented" role="tablist" aria-label="Account type">
+        <button type="button" role="tab" data-role="admin" aria-selected="{{ 'true' if selected == 'admin' else 'false' }}">{{ icon('shield','icon-sm') }} Administrator</button>
+        <button type="button" role="tab" data-role="driver" aria-selected="{{ 'true' if selected == 'driver' else 'false' }}">{{ icon('user','icon-sm') }} Driver</button>
+      </div>
+      <div id="admin-fields" class="auth-form" style="margin:0">
+        <label>Username<input name="username" autocomplete="username" placeholder="Administrator username"></label>
+        <label>Password<span class="field-icon"><input type="password" id="pw" name="password" autocomplete="current-password" placeholder="Administrator password"><button type="button" data-reveal="#pw" aria-label="Show password">{{ icon('eye') }}</button></span></label>
+      </div>
+      <div id="driver-fields" class="auth-form" style="margin:0" hidden>
+        <label>Driving licence number<input name="license_no" placeholder="e.g. WB-TEST-1001" autocomplete="off"></label>
+        <label>Registered mobile number<input name="phone" inputmode="numeric" maxlength="10" pattern="[6-9][0-9]{9}" placeholder="10-digit mobile number" autocomplete="tel"><span class="hint">Use the licence and phone number saved by the administrator.</span></label>
+      </div>
+      <button class="btn btn-primary btn-lg btn-block" type="submit">Sign in {{ icon('arrow') }}</button>
+    </form>
+    {% if default_creds %}<div class="notice info demo-box">{{ icon('info','icon-sm') }}<div><b>Demo logins</b><br>Admin: <code>admin</code> / <code>admin123</code><br>Driver: <code>WB-TEST-1001</code> / <code>9000000001</code></div></div>{% endif %}
+    <p class="auth-foot">DBMS PBL · Academic demonstration</p>
+  </section>
+</main>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+(function(){
+  var role=document.getElementById('login-role'),a=document.getElementById('admin-fields'),d=document.getElementById('driver-fields'),tabs=document.querySelectorAll('[data-role]');
+  function set(r){role.value=r;var isD=r==='driver';a.hidden=isD;d.hidden=!isD;
+    a.querySelectorAll('input').forEach(function(x){x.required=!isD});d.querySelectorAll('input').forEach(function(x){x.required=isD});
+    tabs.forEach(function(t){t.setAttribute('aria-selected',String(t.dataset.role===r))});
+    var f=(isD?d:a).querySelector('input');if(f&&!window.__init)f.focus();}
+  tabs.forEach(function(t){t.addEventListener('click',function(){set(t.dataset.role)})});
+  set(role.value||'admin');window.__init=1;
+})();
+</script></body></html>
